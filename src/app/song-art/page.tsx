@@ -48,7 +48,6 @@ export default function SongArtPage() {
   const [dominantColor, setDominantColor] = useState("#1a1a1a");
   const [columnCount, setColumnCount] = useState(1); // 1 or 2 columns
   const [loading, setLoading] = useState(false);
-  const [uploading, setUploading] = useState(false);
   const [artUrl, setArtUrl] = useState<string | null>(null);
   const [compositeUrl, setCompositeUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -755,66 +754,6 @@ export default function SongArtPage() {
     document.body.removeChild(a);
   };
 
-  const [uploadStatus, setUploadStatus] = useState("");
-
-  const handleAudioUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    setUploading(true);
-    setError(null);
-    setUploadStatus("Getting upload URL...");
-
-    try {
-      // Step 1: Get S3 presigned URL from our API
-      const presignResponse = await fetch(
-        `/api/upload?filename=${encodeURIComponent(file.name)}&contentType=${encodeURIComponent(file.type || "audio/mpeg")}`
-      );
-
-      const uploadData = await presignResponse.json();
-
-      if (!presignResponse.ok) {
-        throw new Error(uploadData.error || "Failed to get upload URL");
-      }
-
-      setUploadStatus(`Uploading ${(file.size / 1024 / 1024).toFixed(1)}MB...`);
-
-      // Step 2: Upload directly to B2 using S3 presigned URL
-      await new Promise<void>((resolve, reject) => {
-        const xhr = new XMLHttpRequest();
-        xhr.open("PUT", uploadData.uploadUrl, true);
-
-        xhr.upload.onprogress = (e) => {
-          if (e.lengthComputable) {
-            const pct = Math.round((e.loaded / e.total) * 100);
-            setUploadStatus(`Uploading... ${pct}%`);
-          }
-        };
-
-        xhr.onload = () => {
-          if (xhr.status >= 200 && xhr.status < 300) {
-            resolve();
-          } else {
-            reject(new Error(`Upload failed: ${xhr.status} ${xhr.responseText}`));
-          }
-        };
-
-        xhr.onerror = () => reject(new Error("Upload failed - connection error"));
-        xhr.send(file);
-      });
-
-      // Step 3: Use the public URL for QR code
-      setUrl(uploadData.publicUrl);
-      setUploadStatus("");
-    } catch (err) {
-      console.error("Upload error:", err);
-      setError(err instanceof Error ? err.message : "Upload failed");
-      setUploadStatus("");
-    } finally {
-      setUploading(false);
-    }
-  };
-
   return (
     <div className="min-h-screen bg-zinc-100 text-zinc-900">
       <div className="mx-auto max-w-6xl px-6 py-12">
@@ -882,56 +821,17 @@ export default function SongArtPage() {
               />
             </div>
 
-            {/* URL / Upload */}
-            <div className="rounded-lg border border-zinc-200 bg-white p-4 space-y-4">
-              <h3 className="font-medium text-zinc-700">QR Code Link</h3>
-
-              <div>
-                <label className="mb-2 block text-sm text-zinc-500">Enter URL or upload audio for permanent link</label>
-                <input
-                  type="url"
-                  value={url}
-                  onChange={(e) => setUrl(e.target.value)}
-                  placeholder="https://spotify.com/track/..."
-                  className="w-full rounded-lg border border-zinc-300 bg-white px-4 py-3 text-zinc-900 placeholder-zinc-400 focus:border-blue-500 focus:outline-none"
-                />
-              </div>
-
-              <div className="flex items-center gap-2 text-sm text-zinc-500">
-                <div className="h-px flex-1 bg-zinc-200" />
-                <span>or</span>
-                <div className="h-px flex-1 bg-zinc-200" />
-              </div>
-
-              <div>
-                <label className="mb-2 block text-sm text-zinc-500">Upload audio for permanent storage</label>
-                <label className={`flex cursor-pointer items-center justify-center gap-2 rounded-lg border-2 border-dashed px-4 py-3 transition-colors ${uploading ? "border-blue-300 bg-blue-50" : "border-zinc-300 hover:border-blue-400 hover:bg-blue-50"}`}>
-                  <input
-                    type="file"
-                    accept="audio/*"
-                    onChange={handleAudioUpload}
-                    disabled={uploading}
-                    className="hidden"
-                  />
-                  {uploading ? (
-                    <span className="text-blue-600">{uploadStatus || "Uploading..."}</span>
-                  ) : (
-                    <>
-                      <svg className="h-5 w-5 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                      </svg>
-                      <span className="text-zinc-600">Choose audio file (MP3, WAV, etc.)</span>
-                    </>
-                  )}
-                </label>
-                <p className="mt-2 text-xs text-zinc-400">Uploaded files are stored permanently on Backblaze B2</p>
-              </div>
-
-              {url && url.includes("backblazeb2.com") && (
-                <div className="rounded bg-green-50 px-3 py-2 text-sm text-green-700">
-                  Permanent link active - this URL will work forever
-                </div>
-              )}
+            {/* URL */}
+            <div>
+              <label className="mb-2 block text-sm font-medium text-zinc-700">QR Code Link</label>
+              <input
+                type="url"
+                value={url}
+                onChange={(e) => setUrl(e.target.value)}
+                placeholder="https://spotify.com/track/... or any URL"
+                className="w-full rounded-lg border border-zinc-300 bg-white px-4 py-3 text-zinc-900 placeholder-zinc-400 focus:border-blue-500 focus:outline-none"
+              />
+              <p className="mt-2 text-xs text-zinc-500">Paste any link - Spotify, Suno, SoundCloud, or your own hosted audio</p>
             </div>
 
             {/* QR Theme */}

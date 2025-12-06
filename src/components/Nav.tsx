@@ -7,6 +7,7 @@ const navItems = [
   { href: "/", label: "QR Art", description: "QR embedded in artwork" },
   { href: "/art-qr", label: "Art + QR", description: "Separate art with QR overlay" },
   { href: "/song-art", label: "Song Art", description: "Art + QR + lyrics layouts" },
+  { href: "/files", label: "Files", description: "Browse B2 files" },
 ];
 
 export default function Nav() {

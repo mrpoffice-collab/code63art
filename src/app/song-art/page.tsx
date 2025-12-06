@@ -783,7 +783,7 @@ export default function SongArtPage() {
       await new Promise<void>((resolve, reject) => {
         const xhr = new XMLHttpRequest();
         xhr.open("PUT", presignData.uploadUrl, true);
-        xhr.setRequestHeader("Content-Type", file.type || "audio/mpeg");
+        // Don't set Content-Type - let browser handle it or use presigned URL's content type
 
         xhr.upload.onprogress = (e) => {
           if (e.lengthComputable) {

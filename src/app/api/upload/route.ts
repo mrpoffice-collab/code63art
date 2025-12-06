@@ -5,7 +5,7 @@ const B2_APP_KEY = process.env.B2_APP_KEY || "";
 const BUCKET_NAME = "code63-media";
 
 // Cache for B2 auth token
-let authCache: { token: string; apiUrl: string; expires: number } | null = null;
+let authCache: { token: string; apiUrl: string; accountId: string; expires: number } | null = null;
 
 async function getB2Auth() {
   // Return cached auth if still valid
@@ -19,6 +19,8 @@ async function getB2Auth() {
   });
 
   if (!response.ok) {
+    const errorText = await response.text();
+    console.error("B2 auth failed:", errorText);
     throw new Error("B2 authorization failed");
   }
 
@@ -26,6 +28,7 @@ async function getB2Auth() {
   authCache = {
     token: data.authorizationToken,
     apiUrl: data.apiUrl,
+    accountId: data.accountId,
     expires: Date.now() + 23 * 60 * 60 * 1000, // 23 hours
   };
   return authCache;
@@ -51,10 +54,12 @@ export async function GET(request: NextRequest) {
         Authorization: auth.token,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ accountId: B2_KEY_ID.substring(0, 12), bucketName: BUCKET_NAME }),
+      body: JSON.stringify({ accountId: auth.accountId, bucketName: BUCKET_NAME }),
     });
 
     if (!bucketsResponse.ok) {
+      const errorText = await bucketsResponse.text();
+      console.error("B2 list buckets failed:", errorText);
       throw new Error("Failed to get bucket info");
     }
 

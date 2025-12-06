@@ -9,6 +9,10 @@ const s3Client = new S3Client({
     accessKeyId: process.env.B2_KEY_ID || "",
     secretAccessKey: process.env.B2_APP_KEY || "",
   },
+  forcePathStyle: true,
+  // Disable checksum for B2 compatibility
+  requestChecksumCalculation: "WHEN_REQUIRED",
+  responseChecksumValidation: "WHEN_REQUIRED",
 });
 
 const BUCKET_NAME = "code63-media";
@@ -36,7 +40,10 @@ export async function GET(request: NextRequest) {
       ContentType: contentType,
     });
 
-    const presignedUrl = await getSignedUrl(s3Client, command, { expiresIn: 3600 });
+    const presignedUrl = await getSignedUrl(s3Client, command, {
+      expiresIn: 3600,
+      unhoistableHeaders: new Set(["x-amz-checksum-crc32"]),
+    });
     const publicUrl = `https://f005.backblazeb2.com/file/${BUCKET_NAME}/${key}`;
 
     return NextResponse.json({

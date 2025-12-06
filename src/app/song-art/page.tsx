@@ -763,22 +763,32 @@ export default function SongArtPage() {
     setError(null);
 
     try {
-      const formData = new FormData();
-      formData.append("file", file);
-      formData.append("folder", "audio");
+      // Step 1: Get presigned URL from our API
+      const presignResponse = await fetch(
+        `/api/upload?filename=${encodeURIComponent(file.name)}&contentType=${encodeURIComponent(file.type || "audio/mpeg")}`
+      );
 
-      const response = await fetch("/api/upload", {
-        method: "POST",
-        body: formData,
-      });
+      const presignData = await presignResponse.json();
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || "Upload failed");
+      if (!presignResponse.ok) {
+        throw new Error(presignData.error || "Failed to get upload URL");
       }
 
-      setUrl(data.url);
+      // Step 2: Upload directly to B2 using presigned URL
+      const uploadResponse = await fetch(presignData.uploadUrl, {
+        method: "PUT",
+        body: file,
+        headers: {
+          "Content-Type": file.type || "audio/mpeg",
+        },
+      });
+
+      if (!uploadResponse.ok) {
+        throw new Error(`Upload failed: ${uploadResponse.status}`);
+      }
+
+      // Step 3: Use the public URL for QR code
+      setUrl(presignData.publicUrl);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Upload failed");
     } finally {

@@ -779,19 +779,30 @@ export default function SongArtPage() {
 
       setUploadStatus(`Uploading ${(file.size / 1024 / 1024).toFixed(1)}MB...`);
 
-      // Step 2: Upload directly to B2 using presigned URL
-      const uploadResponse = await fetch(presignData.uploadUrl, {
-        method: "PUT",
-        body: file,
-        headers: {
-          "Content-Type": file.type || "audio/mpeg",
-        },
-      });
+      // Step 2: Upload directly to B2 using presigned URL (using XHR for better compatibility)
+      await new Promise<void>((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhr.open("PUT", presignData.uploadUrl, true);
+        xhr.setRequestHeader("Content-Type", file.type || "audio/mpeg");
 
-      if (!uploadResponse.ok) {
-        const errorText = await uploadResponse.text();
-        throw new Error(`Upload failed (${uploadResponse.status}): ${errorText}`);
-      }
+        xhr.upload.onprogress = (e) => {
+          if (e.lengthComputable) {
+            const pct = Math.round((e.loaded / e.total) * 100);
+            setUploadStatus(`Uploading... ${pct}%`);
+          }
+        };
+
+        xhr.onload = () => {
+          if (xhr.status >= 200 && xhr.status < 300) {
+            resolve();
+          } else {
+            reject(new Error(`Upload failed: ${xhr.status} ${xhr.responseText}`));
+          }
+        };
+
+        xhr.onerror = () => reject(new Error("Upload failed - connection error"));
+        xhr.send(file);
+      });
 
       // Step 3: Use the public URL for QR code
       setUrl(presignData.publicUrl);

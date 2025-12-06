@@ -755,12 +755,15 @@ export default function SongArtPage() {
     document.body.removeChild(a);
   };
 
+  const [uploadStatus, setUploadStatus] = useState("");
+
   const handleAudioUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
     setUploading(true);
     setError(null);
+    setUploadStatus("Getting upload URL...");
 
     try {
       // Step 1: Get presigned URL from our API
@@ -774,6 +777,8 @@ export default function SongArtPage() {
         throw new Error(presignData.error || "Failed to get upload URL");
       }
 
+      setUploadStatus(`Uploading ${(file.size / 1024 / 1024).toFixed(1)}MB...`);
+
       // Step 2: Upload directly to B2 using presigned URL
       const uploadResponse = await fetch(presignData.uploadUrl, {
         method: "PUT",
@@ -784,13 +789,17 @@ export default function SongArtPage() {
       });
 
       if (!uploadResponse.ok) {
-        throw new Error(`Upload failed: ${uploadResponse.status}`);
+        const errorText = await uploadResponse.text();
+        throw new Error(`Upload failed (${uploadResponse.status}): ${errorText}`);
       }
 
       // Step 3: Use the public URL for QR code
       setUrl(presignData.publicUrl);
+      setUploadStatus("");
     } catch (err) {
+      console.error("Upload error:", err);
       setError(err instanceof Error ? err.message : "Upload failed");
+      setUploadStatus("");
     } finally {
       setUploading(false);
     }
@@ -895,7 +904,7 @@ export default function SongArtPage() {
                     className="hidden"
                   />
                   {uploading ? (
-                    <span className="text-blue-600">Uploading...</span>
+                    <span className="text-blue-600">{uploadStatus || "Uploading..."}</span>
                   ) : (
                     <>
                       <svg className="h-5 w-5 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">

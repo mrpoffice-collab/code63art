@@ -766,24 +766,27 @@ export default function SongArtPage() {
     setUploadStatus("Getting upload URL...");
 
     try {
-      // Step 1: Get presigned URL from our API
+      // Step 1: Get B2 upload URL and auth token from our API
       const presignResponse = await fetch(
-        `/api/upload?filename=${encodeURIComponent(file.name)}&contentType=${encodeURIComponent(file.type || "audio/mpeg")}`
+        `/api/upload?filename=${encodeURIComponent(file.name)}`
       );
 
-      const presignData = await presignResponse.json();
+      const uploadData = await presignResponse.json();
 
       if (!presignResponse.ok) {
-        throw new Error(presignData.error || "Failed to get upload URL");
+        throw new Error(uploadData.error || "Failed to get upload URL");
       }
 
       setUploadStatus(`Uploading ${(file.size / 1024 / 1024).toFixed(1)}MB...`);
 
-      // Step 2: Upload directly to B2 using presigned URL (using XHR for better compatibility)
+      // Step 2: Upload directly to B2 using native API
       await new Promise<void>((resolve, reject) => {
         const xhr = new XMLHttpRequest();
-        xhr.open("PUT", presignData.uploadUrl, true);
-        // Don't set Content-Type - let browser handle it or use presigned URL's content type
+        xhr.open("POST", uploadData.uploadUrl, true);
+        xhr.setRequestHeader("Authorization", uploadData.authToken);
+        xhr.setRequestHeader("X-Bz-File-Name", encodeURIComponent(uploadData.fileName));
+        xhr.setRequestHeader("Content-Type", file.type || "audio/mpeg");
+        xhr.setRequestHeader("X-Bz-Content-Sha1", "do_not_verify");
 
         xhr.upload.onprogress = (e) => {
           if (e.lengthComputable) {
@@ -805,7 +808,7 @@ export default function SongArtPage() {
       });
 
       // Step 3: Use the public URL for QR code
-      setUrl(presignData.publicUrl);
+      setUrl(uploadData.publicUrl);
       setUploadStatus("");
     } catch (err) {
       console.error("Upload error:", err);

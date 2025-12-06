@@ -766,9 +766,9 @@ export default function SongArtPage() {
     setUploadStatus("Getting upload URL...");
 
     try {
-      // Step 1: Get B2 upload URL and auth token from our API
+      // Step 1: Get S3 presigned URL from our API
       const presignResponse = await fetch(
-        `/api/upload?filename=${encodeURIComponent(file.name)}`
+        `/api/upload?filename=${encodeURIComponent(file.name)}&contentType=${encodeURIComponent(file.type || "audio/mpeg")}`
       );
 
       const uploadData = await presignResponse.json();
@@ -779,14 +779,10 @@ export default function SongArtPage() {
 
       setUploadStatus(`Uploading ${(file.size / 1024 / 1024).toFixed(1)}MB...`);
 
-      // Step 2: Upload directly to B2 using native API
+      // Step 2: Upload directly to B2 using S3 presigned URL
       await new Promise<void>((resolve, reject) => {
         const xhr = new XMLHttpRequest();
-        xhr.open("POST", uploadData.uploadUrl, true);
-        xhr.setRequestHeader("Authorization", uploadData.authToken);
-        xhr.setRequestHeader("X-Bz-File-Name", encodeURIComponent(uploadData.fileName));
-        xhr.setRequestHeader("Content-Type", file.type || "audio/mpeg");
-        xhr.setRequestHeader("X-Bz-Content-Sha1", "do_not_verify");
+        xhr.open("PUT", uploadData.uploadUrl, true);
 
         xhr.upload.onprogress = (e) => {
           if (e.lengthComputable) {

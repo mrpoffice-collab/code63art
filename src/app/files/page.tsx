@@ -1,6 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
+
+const UPLOAD_WORKER_URL = "https://upload-worker.mrpoffice.workers.dev";
 
 interface FileItem {
   name: string;
@@ -16,10 +18,66 @@ export default function FilesPage() {
   const [error, setError] = useState<string | null>(null);
   const [currentPath, setCurrentPath] = useState("");
   const [copied, setCopied] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [dragOver, setDragOver] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     loadFiles(currentPath);
   }, [currentPath]);
+
+  const handleUpload = async (file: File) => {
+    setUploading(true);
+    setUploadProgress(0);
+    setError(null);
+
+    try {
+      const xhr = new XMLHttpRequest();
+
+      xhr.upload.onprogress = (e) => {
+        if (e.lengthComputable) {
+          setUploadProgress(Math.round((e.loaded / e.total) * 100));
+        }
+      };
+
+      await new Promise<void>((resolve, reject) => {
+        xhr.onload = () => {
+          if (xhr.status >= 200 && xhr.status < 300) {
+            resolve();
+          } else {
+            reject(new Error(`Upload failed: ${xhr.status}`));
+          }
+        };
+        xhr.onerror = () => reject(new Error("Upload failed"));
+
+        xhr.open("POST", UPLOAD_WORKER_URL);
+        xhr.setRequestHeader("X-Filename", file.name);
+        xhr.setRequestHeader("Content-Type", file.type || "audio/mpeg");
+        xhr.send(file);
+      });
+
+      // Refresh file list
+      await loadFiles(currentPath);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Upload failed");
+    } finally {
+      setUploading(false);
+      setUploadProgress(0);
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setDragOver(false);
+    const file = e.dataTransfer.files[0];
+    if (file) handleUpload(file);
+  };
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) handleUpload(file);
+  };
 
   const loadFiles = async (prefix: string) => {
     setLoading(true);
@@ -121,6 +179,48 @@ export default function FilesPage() {
             Back
           </button>
         )}
+
+        {/* Upload Area */}
+        <div
+          onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+          onDragLeave={() => setDragOver(false)}
+          onDrop={handleDrop}
+          onClick={() => fileInputRef.current?.click()}
+          className={`mb-6 cursor-pointer rounded-xl border-2 border-dashed p-8 text-center transition-colors ${
+            dragOver
+              ? "border-blue-500 bg-blue-50"
+              : uploading
+              ? "border-blue-300 bg-blue-50"
+              : "border-zinc-300 hover:border-zinc-400 hover:bg-zinc-50"
+          }`}
+        >
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="audio/*"
+            onChange={handleFileSelect}
+            className="hidden"
+          />
+          {uploading ? (
+            <div>
+              <div className="mb-2 text-blue-600 font-medium">Uploading... {uploadProgress}%</div>
+              <div className="mx-auto h-2 w-64 rounded-full bg-blue-200">
+                <div
+                  className="h-2 rounded-full bg-blue-600 transition-all"
+                  style={{ width: `${uploadProgress}%` }}
+                />
+              </div>
+            </div>
+          ) : (
+            <div>
+              <svg className="mx-auto h-12 w-12 text-zinc-400 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+              </svg>
+              <p className="text-zinc-600 font-medium">Drop files here or click to upload</p>
+              <p className="text-sm text-zinc-400 mt-1">Audio files (MP3, WAV, etc.)</p>
+            </div>
+          )}
+        </div>
 
         {error && (
           <div className="mb-4 rounded-lg border border-red-300 bg-red-50 px-4 py-3 text-red-700">

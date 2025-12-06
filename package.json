@@ -9,6 +9,7 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.946.0",
     "@types/qrcode": "^1.5.6",
     "next": "16.0.7",
     "qrcode": "^1.5.4",

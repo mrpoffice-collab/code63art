@@ -52,6 +52,8 @@ export default function SongArtPage() {
   const [compositeUrl, setCompositeUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isHydrated, setIsHydrated] = useState(false);
+  const [creatingPlayer, setCreatingPlayer] = useState(false);
+  const [playerUrl, setPlayerUrl] = useState<string | null>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   // Load from localStorage on mount
@@ -754,6 +756,60 @@ export default function SongArtPage() {
     document.body.removeChild(a);
   };
 
+  const handleCreatePlayer = async () => {
+    if (!compositeUrl || !url) {
+      setError("Need both artwork and audio URL to create player");
+      return;
+    }
+
+    setCreatingPlayer(true);
+    setError(null);
+    setPlayerUrl(null);
+
+    try {
+      // Convert data URL to blob
+      const response = await fetch(compositeUrl);
+      const blob = await response.blob();
+
+      // Upload to B2 via Cloudflare Worker
+      const filename = `${title || "artwork"}-${Date.now()}.png`;
+      const uploadResponse = await fetch("https://upload-worker.mrpoffice.workers.dev", {
+        method: "POST",
+        headers: {
+          "X-Filename": filename,
+          "Content-Type": "image/png",
+        },
+        body: blob,
+      });
+
+      if (!uploadResponse.ok) {
+        throw new Error("Failed to upload artwork");
+      }
+
+      const uploadData = await uploadResponse.json();
+      const imageUrl = uploadData.url;
+
+      // Build player URL
+      const playerParams = new URLSearchParams();
+      playerParams.set("a", url);
+      playerParams.set("i", imageUrl);
+      if (title) playerParams.set("t", title);
+
+      const fullPlayerUrl = `${window.location.origin}/play?${playerParams.toString()}`;
+      setPlayerUrl(fullPlayerUrl);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to create player");
+    } finally {
+      setCreatingPlayer(false);
+    }
+  };
+
+  const copyPlayerUrl = () => {
+    if (playerUrl) {
+      navigator.clipboard.writeText(playerUrl);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-zinc-100 text-zinc-900">
       <div className="mx-auto max-w-6xl px-6 py-12">
@@ -1064,14 +1120,49 @@ export default function SongArtPage() {
                 <div className="overflow-auto rounded-xl border border-zinc-300 bg-white shadow-sm" style={{ maxHeight: "80vh" }}>
                   <img src={compositeUrl} alt="Song Art" className="w-full" />
                 </div>
-                <button
-                  onClick={handleDownload}
-                  className="w-full rounded-lg bg-green-600 py-3 font-medium text-white hover:bg-green-700 flex items-center justify-center gap-2"
-                >
-                  <span>Download</span>
-                  <span className="rounded bg-green-700 px-2 py-0.5 text-sm">$1</span>
-                </button>
-                <p className="text-center text-xs text-zinc-500">Free preview above, pay to download full resolution</p>
+                <div className="flex gap-2">
+                  <button
+                    onClick={handleDownload}
+                    className="flex-1 rounded-lg bg-green-600 py-3 font-medium text-white hover:bg-green-700"
+                  >
+                    Download
+                  </button>
+                  <button
+                    onClick={handleCreatePlayer}
+                    disabled={creatingPlayer || !url}
+                    className="flex-1 rounded-lg bg-blue-600 py-3 font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+                  >
+                    {creatingPlayer ? "Creating..." : "Create Player"}
+                  </button>
+                </div>
+
+                {playerUrl && (
+                  <div className="rounded-lg border border-blue-200 bg-blue-50 p-4 space-y-3">
+                    <p className="text-sm font-medium text-blue-800">Player Created!</p>
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        readOnly
+                        value={playerUrl}
+                        className="flex-1 rounded border border-blue-300 bg-white px-3 py-2 text-xs text-zinc-700"
+                      />
+                      <button
+                        onClick={copyPlayerUrl}
+                        className="rounded bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-700"
+                      >
+                        Copy
+                      </button>
+                    </div>
+                    <a
+                      href={playerUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="block text-center text-sm text-blue-600 hover:underline"
+                    >
+                      Open Player
+                    </a>
+                  </div>
+                )}
               </div>
             ) : (
               <div

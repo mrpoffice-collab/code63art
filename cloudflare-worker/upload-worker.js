@@ -29,10 +29,12 @@ export default {
       const filename = request.headers.get('X-Filename') || 'upload.mp3';
       const contentType = request.headers.get('Content-Type') || 'audio/mpeg';
 
-      // Generate unique key
+      // Generate unique key - detect if audio or image
       const timestamp = Date.now();
       const safeName = filename.replace(/[^a-zA-Z0-9.-]/g, '_');
-      const key = `audio/${timestamp}-${safeName}`;
+      const isImage = contentType.startsWith('image/') || /\.(png|jpg|jpeg|gif|webp)$/i.test(filename);
+      const folder = isImage ? 'images' : 'audio';
+      const key = `${folder}/${timestamp}-${safeName}`;
 
       // Get B2 auth
       const authString = btoa(`${env.B2_KEY_ID}:${env.B2_APP_KEY}`);

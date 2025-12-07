@@ -83,46 +83,34 @@ function PlayerContent() {
   }
 
   return (
-    <div className="relative min-h-screen bg-zinc-900">
-      {/* Background - dark with centered image */}
-      {imageUrl && (
-        <>
-          {/* Blurred background fill */}
-          <div
-            className="absolute inset-0 bg-cover bg-center blur-2xl opacity-30 scale-110"
-            style={{ backgroundImage: `url(${imageUrl})` }}
-          />
-          {/* Sharp centered image */}
-          <div className="absolute inset-0 flex items-center justify-center p-4">
-            <img
-              src={imageUrl}
-              alt=""
-              className="max-h-[70vh] max-w-full object-contain rounded-lg shadow-2xl"
-            />
-          </div>
-        </>
-      )}
-
-      {/* Overlay for better contrast on controls */}
-      <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent" />
-
+    <div className="min-h-screen bg-zinc-900 flex flex-col">
       {/* Audio Element */}
       <audio ref={audioRef} src={audioUrl} preload="metadata" />
 
-      {/* Content */}
-      <div className="relative flex min-h-screen flex-col items-center justify-end pb-12 px-6">
-        {/* Title */}
-        {title && (
-          <h1 className="mb-8 text-center text-2xl font-bold text-white drop-shadow-lg">
-            {title}
-          </h1>
+      {/* Image Section */}
+      <div className="flex-1 flex items-center justify-center p-4">
+        {imageUrl && (
+          <img
+            src={imageUrl}
+            alt={title || "Artwork"}
+            className="max-h-[65vh] max-w-full object-contain rounded-lg shadow-2xl"
+          />
         )}
+      </div>
 
-        {/* Player Controls */}
-        <div className="w-full max-w-md space-y-4">
+      {/* Player Controls Section */}
+      <div className="bg-zinc-800 px-6 py-6">
+        <div className="mx-auto max-w-md space-y-4">
+          {/* Title */}
+          {title && (
+            <h1 className="text-center text-lg font-semibold text-white">
+              {title}
+            </h1>
+          )}
+
           {/* Progress Bar */}
           <div
-            className="group relative h-2 cursor-pointer rounded-full bg-white/30"
+            className="group relative h-2 cursor-pointer rounded-full bg-white/20"
             onClick={handleSeek}
           >
             <div
@@ -136,7 +124,7 @@ function PlayerContent() {
           </div>
 
           {/* Time */}
-          <div className="flex justify-between text-sm text-white/70">
+          <div className="flex justify-between text-sm text-white/60">
             <span>{formatTime(currentTime)}</span>
             <span>{formatTime(duration)}</span>
           </div>
@@ -146,7 +134,7 @@ function PlayerContent() {
             <button
               onClick={togglePlay}
               disabled={!isLoaded}
-              className="flex h-16 w-16 items-center justify-center rounded-full bg-white text-zinc-900 shadow-lg transition-transform hover:scale-105 disabled:opacity-50"
+              className="flex h-14 w-14 items-center justify-center rounded-full bg-white text-zinc-900 shadow-lg transition-transform hover:scale-105 disabled:opacity-50"
             >
               {isPlaying ? (
                 <svg className="h-6 w-6" fill="currentColor" viewBox="0 0 24 24">
@@ -159,10 +147,10 @@ function PlayerContent() {
               )}
             </button>
           </div>
-        </div>
 
-        {/* Branding */}
-        <p className="mt-8 text-xs text-white/40">code63.art</p>
+          {/* Branding */}
+          <p className="text-center text-xs text-white/30">code63.art</p>
+        </div>
       </div>
     </div>
   );

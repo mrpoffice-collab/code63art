@@ -54,7 +54,9 @@ export default function SongArtPage() {
   const [isHydrated, setIsHydrated] = useState(false);
   const [creatingPlayer, setCreatingPlayer] = useState(false);
   const [playerUrl, setPlayerUrl] = useState<string | null>(null);
+  const [imageSource, setImageSource] = useState<"ai" | "upload">("ai");
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Load from localStorage on mount
   useEffect(() => {
@@ -746,6 +748,27 @@ export default function SongArtPage() {
     }
   };
 
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      setError("Please select an image file");
+      return;
+    }
+
+    setError(null);
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const dataUrl = event.target?.result as string;
+      setArtUrl(dataUrl);
+    };
+    reader.onerror = () => {
+      setError("Failed to read image file");
+    };
+    reader.readAsDataURL(file);
+  };
+
   const handleDownload = () => {
     if (!compositeUrl) return;
     const a = document.createElement("a");
@@ -1068,60 +1091,110 @@ export default function SongArtPage() {
               </div>
             </div>
 
-            {/* Style Presets */}
-            <div>
-              <label className="mb-2 block text-sm font-medium text-zinc-700">Art Style</label>
-              <div className="flex flex-wrap gap-2">
-                {STYLE_PRESETS.map((style) => (
-                  <button
-                    key={style.name}
-                    onClick={() => setPrompt(style.prompt)}
-                    className={`rounded-full border px-3 py-1.5 text-xs ${
-                      prompt === style.prompt
-                        ? "border-blue-500 bg-blue-50 text-blue-700"
-                        : "border-zinc-300 text-zinc-600 hover:border-zinc-400"
-                    }`}
-                  >
-                    {style.name}
-                  </button>
-                ))}
+            {/* Image Source Toggle */}
+            <div className="rounded-lg border border-zinc-200 bg-white p-4 space-y-4">
+              <h3 className="font-medium text-zinc-700">Background Image</h3>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setImageSource("ai")}
+                  className={`flex-1 rounded border px-4 py-2 text-sm ${
+                    imageSource === "ai"
+                      ? "border-blue-500 bg-blue-50 text-blue-700"
+                      : "border-zinc-300 text-zinc-600 hover:border-zinc-400"
+                  }`}
+                >
+                  AI Generated
+                </button>
+                <button
+                  onClick={() => setImageSource("upload")}
+                  className={`flex-1 rounded border px-4 py-2 text-sm ${
+                    imageSource === "upload"
+                      ? "border-blue-500 bg-blue-50 text-blue-700"
+                      : "border-zinc-300 text-zinc-600 hover:border-zinc-400"
+                  }`}
+                >
+                  Upload Image
+                </button>
               </div>
-            </div>
 
-            {/* Prompt */}
-            <div>
-              <label className="mb-2 block text-sm font-medium text-zinc-700">Art Prompt</label>
-              <textarea
-                value={prompt}
-                onChange={(e) => setPrompt(e.target.value)}
-                placeholder="Describe the background art..."
-                rows={2}
-                className="w-full rounded-lg border border-zinc-300 bg-white px-4 py-3 text-zinc-900 placeholder-zinc-400 focus:border-blue-500 focus:outline-none"
-              />
-            </div>
+              {imageSource === "upload" ? (
+                <div className="space-y-3">
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={handleImageUpload}
+                    className="hidden"
+                  />
+                  <button
+                    onClick={() => fileInputRef.current?.click()}
+                    className="w-full rounded-lg border-2 border-dashed border-zinc-300 bg-zinc-50 py-6 text-sm text-zinc-600 hover:border-blue-400 hover:bg-blue-50 hover:text-blue-600"
+                  >
+                    Click to upload image
+                  </button>
+                  {artUrl && imageSource === "upload" && (
+                    <p className="text-xs text-green-600">Image uploaded</p>
+                  )}
+                </div>
+              ) : (
+                <>
+                  {/* Style Presets */}
+                  <div>
+                    <label className="mb-2 block text-sm text-zinc-500">Art Style</label>
+                    <div className="flex flex-wrap gap-2">
+                      {STYLE_PRESETS.map((style) => (
+                        <button
+                          key={style.name}
+                          onClick={() => setPrompt(style.prompt)}
+                          className={`rounded-full border px-3 py-1.5 text-xs ${
+                            prompt === style.prompt
+                              ? "border-blue-500 bg-blue-50 text-blue-700"
+                              : "border-zinc-300 text-zinc-600 hover:border-zinc-400"
+                          }`}
+                        >
+                          {style.name}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
 
-            {/* Model */}
-            <div className="flex items-center gap-6">
-              <label className="flex items-center gap-2">
-                <input type="radio" checked={model === "schnell"} onChange={() => setModel("schnell")} className="accent-blue-500" />
-                <span className="text-sm">Flux Schnell</span>
-                <span className="text-xs text-zinc-500">($0.003)</span>
-              </label>
-              <label className="flex items-center gap-2">
-                <input type="radio" checked={model === "dev"} onChange={() => setModel("dev")} className="accent-blue-500" />
-                <span className="text-sm">Flux Dev</span>
-                <span className="text-xs text-zinc-500">($0.025)</span>
-              </label>
-            </div>
+                  {/* Prompt */}
+                  <div>
+                    <label className="mb-2 block text-sm text-zinc-500">Art Prompt</label>
+                    <textarea
+                      value={prompt}
+                      onChange={(e) => setPrompt(e.target.value)}
+                      placeholder="Describe the background art..."
+                      rows={2}
+                      className="w-full rounded-lg border border-zinc-300 bg-white px-4 py-3 text-zinc-900 placeholder-zinc-400 focus:border-blue-500 focus:outline-none"
+                    />
+                  </div>
 
-            {/* Generate */}
-            <button
-              onClick={handleGenerate}
-              disabled={loading}
-              className="w-full rounded-lg bg-blue-600 py-4 font-semibold text-white hover:bg-blue-700 disabled:opacity-50"
-            >
-              {loading ? "Generating..." : "Generate Song Art"}
-            </button>
+                  {/* Model */}
+                  <div className="flex items-center gap-6">
+                    <label className="flex items-center gap-2">
+                      <input type="radio" checked={model === "schnell"} onChange={() => setModel("schnell")} className="accent-blue-500" />
+                      <span className="text-sm">Flux Schnell</span>
+                      <span className="text-xs text-zinc-500">($0.003)</span>
+                    </label>
+                    <label className="flex items-center gap-2">
+                      <input type="radio" checked={model === "dev"} onChange={() => setModel("dev")} className="accent-blue-500" />
+                      <span className="text-sm">Flux Dev</span>
+                      <span className="text-xs text-zinc-500">($0.025)</span>
+                    </label>
+                  </div>
+
+                  {/* Generate */}
+                  <button
+                    onClick={handleGenerate}
+                    disabled={loading}
+                    className="w-full rounded-lg bg-blue-600 py-4 font-semibold text-white hover:bg-blue-700 disabled:opacity-50"
+                  >
+                    {loading ? "Generating..." : "Generate Art"}
+                  </button>
+                </>
+              )}
+            </div>
 
             {error && (
               <div className="rounded-lg border border-red-300 bg-red-50 px-4 py-3 text-red-700">

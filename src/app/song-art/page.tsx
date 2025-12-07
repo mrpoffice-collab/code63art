@@ -789,14 +789,16 @@ export default function SongArtPage() {
     setError(null);
     setPlayerUrl(null);
 
+    const WORKER_URL = "https://upload-worker.mrpoffice.workers.dev";
+
     try {
       // Convert data URL to blob
       const response = await fetch(compositeUrl);
       const blob = await response.blob();
 
-      // Upload to B2 via Cloudflare Worker
+      // Upload image to B2 via Cloudflare Worker
       const filename = `${title || "artwork"}-${Date.now()}.png`;
-      const uploadResponse = await fetch("https://upload-worker.mrpoffice.workers.dev", {
+      const uploadResponse = await fetch(WORKER_URL, {
         method: "POST",
         headers: {
           "X-Filename": filename,
@@ -812,18 +814,24 @@ export default function SongArtPage() {
       const uploadData = await uploadResponse.json();
       const imageUrl = uploadData.url;
 
-      // Build player URL with short paths (strip B2 base URL)
-      const B2_BASE = "https://f005.backblazeb2.com/file/code63-media/";
-      const shortAudio = url.startsWith(B2_BASE) ? url.replace(B2_BASE, "") : url;
-      const shortImage = imageUrl.startsWith(B2_BASE) ? imageUrl.replace(B2_BASE, "") : imageUrl;
+      // Create short player URL via KV storage
+      const playerResponse = await fetch(`${WORKER_URL}/p`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          audio: url,
+          image: imageUrl,
+          title: title || null,
+        }),
+      });
 
-      const playerParams = new URLSearchParams();
-      playerParams.set("a", shortAudio);
-      playerParams.set("i", shortImage);
-      if (title) playerParams.set("t", title);
+      if (!playerResponse.ok) {
+        throw new Error("Failed to create player");
+      }
 
-      const fullPlayerUrl = `${window.location.origin}/play?${playerParams.toString()}`;
-      setPlayerUrl(fullPlayerUrl);
+      const playerData = await playerResponse.json();
+      const shortPlayerUrl = `${window.location.origin}/p/${playerData.id}`;
+      setPlayerUrl(shortPlayerUrl);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to create player");
     } finally {

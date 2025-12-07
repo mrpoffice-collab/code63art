@@ -41,7 +41,8 @@ export async function GET(request: NextRequest) {
       throw new Error("Bucket not found");
     }
 
-    // List files
+    // List files (use delimiter only for browsing, not for playlist)
+    const recursive = searchParams.get("recursive") === "true";
     const filesResponse = await fetch(`${auth.apiUrl}/b2api/v2/b2_list_file_names`, {
       method: "POST",
       headers: {
@@ -52,7 +53,7 @@ export async function GET(request: NextRequest) {
         bucketId: bucket.bucketId,
         prefix: prefix,
         maxFileCount: 1000,
-        delimiter: "/",
+        ...(recursive ? {} : { delimiter: "/" }),
       }),
     });
 

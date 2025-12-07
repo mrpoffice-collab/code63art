@@ -84,16 +84,27 @@ function PlayerContent() {
 
   return (
     <div className="relative min-h-screen bg-zinc-900">
-      {/* Background Image */}
+      {/* Background - dark with centered image */}
       {imageUrl && (
-        <div
-          className="absolute inset-0 bg-cover bg-center"
-          style={{ backgroundImage: `url(${imageUrl})` }}
-        />
+        <>
+          {/* Blurred background fill */}
+          <div
+            className="absolute inset-0 bg-cover bg-center blur-2xl opacity-30 scale-110"
+            style={{ backgroundImage: `url(${imageUrl})` }}
+          />
+          {/* Sharp centered image */}
+          <div className="absolute inset-0 flex items-center justify-center p-4">
+            <img
+              src={imageUrl}
+              alt=""
+              className="max-h-[70vh] max-w-full object-contain rounded-lg shadow-2xl"
+            />
+          </div>
+        </>
       )}
 
       {/* Overlay for better contrast on controls */}
-      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
+      <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent" />
 
       {/* Audio Element */}
       <audio ref={audioRef} src={audioUrl} preload="metadata" />

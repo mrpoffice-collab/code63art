@@ -3,11 +3,17 @@
 import { useSearchParams } from "next/navigation";
 import { useState, useRef, useEffect, Suspense } from "react";
 
+const B2_BASE = "https://f005.backblazeb2.com/file/code63-media/";
+
 function PlayerContent() {
   const searchParams = useSearchParams();
-  const audioUrl = searchParams.get("a") || "";
-  const imageUrl = searchParams.get("i") || "";
+  const audioParam = searchParams.get("a") || "";
+  const imageParam = searchParams.get("i") || "";
   const title = searchParams.get("t") || "";
+
+  // Support both full URLs and short paths
+  const audioUrl = audioParam.startsWith("http") ? audioParam : B2_BASE + audioParam;
+  const imageUrl = imageParam.startsWith("http") ? imageParam : B2_BASE + imageParam;
 
   const audioRef = useRef<HTMLAudioElement>(null);
   const [isPlaying, setIsPlaying] = useState(false);

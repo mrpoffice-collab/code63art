@@ -789,10 +789,14 @@ export default function SongArtPage() {
       const uploadData = await uploadResponse.json();
       const imageUrl = uploadData.url;
 
-      // Build player URL
+      // Build player URL with short paths (strip B2 base URL)
+      const B2_BASE = "https://f005.backblazeb2.com/file/code63-media/";
+      const shortAudio = url.startsWith(B2_BASE) ? url.replace(B2_BASE, "") : url;
+      const shortImage = imageUrl.startsWith(B2_BASE) ? imageUrl.replace(B2_BASE, "") : imageUrl;
+
       const playerParams = new URLSearchParams();
-      playerParams.set("a", url);
-      playerParams.set("i", imageUrl);
+      playerParams.set("a", shortAudio);
+      playerParams.set("i", shortImage);
       if (title) playerParams.set("t", title);
 
       const fullPlayerUrl = `${window.location.origin}/play?${playerParams.toString()}`;

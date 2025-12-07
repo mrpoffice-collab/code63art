@@ -828,6 +828,21 @@ export default function SongArtPage() {
               Clear All
             </button>
           </div>
+
+          {/* Workflow Guide */}
+          <details className="mt-4 rounded-lg border border-blue-200 bg-blue-50">
+            <summary className="cursor-pointer px-4 py-3 text-sm font-medium text-blue-800">
+              How to create a scannable player card
+            </summary>
+            <ol className="px-4 pb-4 text-sm text-blue-700 list-decimal list-inside space-y-1">
+              <li>Fill in title, lyrics, and art prompt</li>
+              <li>Put your <strong>audio URL</strong> in QR field</li>
+              <li>Click <strong>Generate</strong> to create artwork</li>
+              <li>Click <strong>Create Player</strong> → copy the player URL</li>
+              <li>Paste player URL into QR field (image stays the same)</li>
+              <li><strong>Download</strong> - QR now links to full player experience</li>
+            </ol>
+          </details>
         </header>
 
         <div className="grid gap-8 lg:grid-cols-2">

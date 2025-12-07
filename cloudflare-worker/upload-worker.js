@@ -57,6 +57,79 @@ export default {
       });
     }
 
+    // Route: GET /pl/:id - Get playlist config
+    if (request.method === 'GET' && url.pathname.startsWith('/pl/')) {
+      const id = url.pathname.slice(4); // Remove "/pl/"
+
+      if (!env.PLAYERS) {
+        return new Response(JSON.stringify({ error: 'KV not configured' }), {
+          status: 500,
+          headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+        });
+      }
+
+      const config = await env.PLAYERS.get(`pl_${id}`, 'json');
+
+      if (!config) {
+        return new Response(JSON.stringify({ error: 'Playlist not found' }), {
+          status: 404,
+          headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+        });
+      }
+
+      return new Response(JSON.stringify(config), {
+        headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+      });
+    }
+
+    // Route: POST /pl - Create playlist config
+    if (request.method === 'POST' && url.pathname === '/pl') {
+      if (!env.PLAYERS) {
+        return new Response(JSON.stringify({ error: 'KV not configured' }), {
+          status: 500,
+          headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+        });
+      }
+
+      try {
+        const config = await request.json();
+
+        // Validate required fields
+        if (!config.tracks || !Array.isArray(config.tracks) || config.tracks.length === 0) {
+          return new Response(JSON.stringify({ error: 'tracks array required' }), {
+            status: 400,
+            headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+          });
+        }
+
+        // Generate unique ID (retry if collision)
+        let id;
+        let attempts = 0;
+        do {
+          id = generateShortId();
+          const existing = await env.PLAYERS.get(`pl_${id}`);
+          if (!existing) break;
+          attempts++;
+        } while (attempts < 5);
+
+        // Store playlist config
+        await env.PLAYERS.put(`pl_${id}`, JSON.stringify({
+          name: config.name || 'Playlist',
+          tracks: config.tracks, // Array of {url, title}
+          created: Date.now(),
+        }));
+
+        return new Response(JSON.stringify({ id }), {
+          headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+        });
+      } catch (error) {
+        return new Response(JSON.stringify({ error: 'Invalid JSON' }), {
+          status: 400,
+          headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+        });
+      }
+    }
+
     // Route: POST /p - Create player config
     if (request.method === 'POST' && url.pathname === '/p') {
       if (!env.PLAYERS) {

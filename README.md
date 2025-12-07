@@ -1,36 +1,103 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# code63.art
 
-## Getting Started
+AI-generated song artwork with lyrics and QR codes. Create printable cards that link to a full audio player experience.
 
-First, run the development server:
+## Live Site
+https://code63.art
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+## Architecture
+
+```
+┌─────────────────┐     ┌──────────────────┐     ┌─────────────────┐
+│   Vercel        │     │ Cloudflare       │     │ Backblaze B2    │
+│   (Next.js)     │     │ Worker           │     │ (Storage)       │
+│                 │     │                  │     │                 │
+│ - Song Art page │────▶│ upload-worker    │────▶│ code63-media    │
+│ - /play page    │     │ (proxy uploads)  │     │ bucket          │
+│ - /files page   │     │                  │     │                 │
+└─────────────────┘     └──────────────────┘     └─────────────────┘
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Features
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+- **QR Art** (`/`): QR code embedded directly into AI-generated artwork
+- **Art + QR** (`/art-qr`): AI art with standard QR code overlay
+- **Song Art** (`/song-art`): Lyrics layouts with AI art and QR codes
+- **Files** (`/files`): Browse and upload files to B2 storage
+- **Player** (`/play`): Full-screen audio player with artwork background
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Environment Variables
 
-## Learn More
+### Vercel
+```
+REPLICATE_API_TOKEN=r8_xxx    # For AI image generation
+B2_KEY_ID=xxx                  # Backblaze B2 key ID
+B2_APP_KEY=xxx                 # Backblaze B2 app key
+```
 
-To learn more about Next.js, take a look at the following resources:
+### Cloudflare Worker
+Set these in Cloudflare dashboard → Workers → upload-worker → Settings → Variables:
+```
+B2_KEY_ID=xxx
+B2_APP_KEY=xxx
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Key Files
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+| File | Purpose |
+|------|---------|
+| `src/app/song-art/page.tsx` | Main artwork creator with lyrics, QR, layouts |
+| `src/app/play/page.tsx` | Audio player page (linked from QR codes) |
+| `src/app/files/page.tsx` | B2 file browser with drag-drop upload |
+| `src/app/api/files/route.ts` | API to list B2 bucket contents |
+| `src/app/api/generate-art/route.ts` | API to generate AI images via Replicate |
+| `cloudflare-worker/upload-worker.js` | Cloudflare Worker that proxies uploads to B2 |
 
-## Deploy on Vercel
+## Cloudflare Worker
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+The upload worker proxies browser uploads to B2 (bypasses CORS issues).
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+**Worker URL:** `https://upload-worker.mrpoffice.workers.dev`
+
+**To update the worker:**
+1. Cloudflare dashboard → Workers & Pages → upload-worker
+2. Click "Edit Code"
+3. Paste contents of `cloudflare-worker/upload-worker.js`
+4. Click "Deploy"
+
+**Accepts:**
+- Audio files → stored in `audio/` folder
+- Images → stored in `images/` folder
+
+## DNS Setup (Cloudflare + GoDaddy)
+
+1. GoDaddy nameservers point to Cloudflare
+2. Cloudflare DNS records:
+   - `code63.art` → A record or CNAME to Vercel
+   - Proxy status should be OFF (gray cloud) for Vercel
+
+## B2 Storage
+
+**Bucket:** `code63-media`
+**Public URL pattern:** `https://f005.backblazeb2.com/file/code63-media/[path]`
+
+**Free tier:** 1GB/day download bandwidth (~200-250 song plays at 4-5MB each)
+
+## User Workflow (Creating a Player Card)
+
+1. Go to Song Art page
+2. Fill in title, lyrics, art prompt
+3. Put audio URL (from B2) in QR field
+4. Click "Generate" to create AI artwork
+5. Click "Create Player" → copy the player URL
+6. Paste player URL into QR field (artwork stays same)
+7. Download - QR now links to full player experience
+
+## Local Development
+
+```bash
+npm install
+npm run dev
+```
+
+Open http://localhost:3000
